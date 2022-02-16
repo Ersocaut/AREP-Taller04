@@ -2,6 +2,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 
+//java -cp "./target/classes" InvokeMain ReflectionExample
+
 public class InvokeMain {
     public static void main(String... args) {
         try {
