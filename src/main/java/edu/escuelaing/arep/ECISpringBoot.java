@@ -1,17 +1,32 @@
+package edu.escuelaing.arep;
+
+import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import edu.escuelaing.arep.annotation.*;
+import server.HttpServer;
 
 public class ECISpringBoot {
 
     //Map encargado de mantener los pares <Url, método>
-    private Map<String, Method> services = new HashMap<>();
+    private final Map<String, Method> services = new HashMap<>();
 
     private static ECISpringBoot singleton = new ECISpringBoot();
 
+    private File path;
+
     private ECISpringBoot(){};
+
+    private ECISpringBoot(File path){
+        this.path = path;
+    }
 
     public static ECISpringBoot getInstance(){
         return singleton;
@@ -22,13 +37,13 @@ public class ECISpringBoot {
         try {
             HttpServer server = new HttpServer();
             server.start();
-        } catch (IOException e) {
+        } catch (IOException | URISyntaxException e) {
             e.printStackTrace();
         }
     }
 
     private void loadComponents() {
-        String[] componentList = searchComponentList();
+        List<String> componentList = searchComponentList(this.path);
         for (String t : componentList){
             loadServices(t);
         }
@@ -49,19 +64,38 @@ public class ECISpringBoot {
         }
     }
 
-    private String[] searchComponentList() {
-        //return new String[]{"Debería ir a buscar en el disco duro los componentes"}
-        //Método a implementar
-        return null;
+    private String convertPath(String p){
+        return p.replace(".java","").replace("\\",".").replace("..src.main.java.","");
+    }
+
+    private List<String> searchComponentList(File file) {
+        List<String> components = new ArrayList<>();
+        if (file.isDirectory()){
+            for (File root : file.listFiles()){
+                components.addAll(searchComponentList(root));
+            }
+        }else{
+            if (file.getName().endsWith("java")){
+                String path = convertPath(file.getPath());
+                Class c = null;
+                try{
+                    c = Class.forName(path);
+                }catch(Exception e){
+                    e.printStackTrace();
+                }
+                if (c.isAnnotationPresent(Component.class)){
+                    components.add(path);
+                }
+            }
+        }
+        return components;
     }
 
     public String invokeService(String serviceName){
         Method serviceMethod = services.get(serviceName);
         try {
             return (String) serviceMethod.invoke(null);
-        } catch (IllegalAccessException e) {
-            e.printStackTrace();
-        } catch (InvocationTargetException e) {
+        } catch (IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();
         }
         return "Service Error lmao";
